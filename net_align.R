@@ -1,8 +1,14 @@
 net_align <- function(netfileA, netfileB,simfile, alpha=1,beta=2,delta.d=1e-10,output="result.txt")
-{
+{ a<- Sys.time()
   combined_net <- read_net(netfileA,netfileB,simfile)
+  b<- Sys.time()
   crf <-build_model(combined_net,alpha,beta,delta.d)
+  c<- Sys.time()
   result <- decode.lbp(crf)
+  d<-Sys.time()
+  print(b-a)
+  print(c-b)
+  print(d-c)
   result <- crf$state.map[cbind(1:crf$n.nodes, result)]
   write_result(combined_net, result, output)
 }
@@ -30,10 +36,16 @@ read_net <- function(netfileA,netfileB,simfile)
   node.id <- seq_along(net.node)
   names(node.id) <- net.node
   net.matrix <- sparseMatrix(node.id[net.edge[,1]], node.id[net.edge[,2]], x=T, dims=c(net.size, net.size))
-  net.matrixA <- sparseMatrix(node.id[net.edgeA[,1]], node.id[net.edgeA[,2]], x=T, dims=c(net.size+1, net.size+1))
-  net.matrixB <- sparseMatrix(node.id[net.edgeB[,1]], node.id[net.edgeB[,2]], x=T, dims=c(net.size+1, net.size+1))
-  sim.matrix <- sparseMatrix(node.id[sim.edge[,1]], node.id[sim.edge[,2]], x=as.numeric(sim.text[,3]), dims=c(net.size, net.size))
-  list(node_sim = sim.matrix,sizeA=net.sizeA,node=net.node, matrix=net.matrix,
+  #net.matrixA <- sparseMatrix(node.id[net.edgeA[,1]], node.id[net.edgeA[,2]], x=T, dims=c(net.size+1, net.size+1))
+  #net.matrixB <- sparseMatrix(node.id[net.edgeB[,1]], node.id[net.edgeB[,2]], x=T, dims=c(net.size+1, net.size+1))
+  #sim.matrix <- sparseMatrix(node.id[sim.edge[,1]], node.id[sim.edge[,2]], x=as.numeric(sim.text[,3]), dims=c(net.size, net.size))
+  net.matrixA <-matrix(0,net.sizeA,net.sizeA)
+  net.matrixB <-matrix(0,net.sizeB+1,net.sizeB+1)
+  sim.matrix <-matrix(0,net.size,net.size)
+  sim.matrix[cbind(node.id[as.character(sim.text[,1])],node.id[as.character(sim.text[,2])])] <- as.numeric(sim.text[,3])
+  net.matrixA[cbind(node.id[net.edgeA[,1]],node.id[net.edgeA[,2]])] <- 1
+  net.matrixB[cbind(node.id[net.edgeB[,1]]-net.sizeA,node.id[net.edgeB[,2]]-net.sizeA)] <- 1
+  list(node_sim = sim.matrix,size = net.size,sizeA=net.sizeA,node=net.node, matrix=net.matrix,
        matrixA = net.matrixA,matrixB = net.matrixB)
   
 }
@@ -49,6 +61,7 @@ build_model <- function(combined_net,alpha,beta,delta.d)
     crf$node.pot[i, 1:crf$n.states[i]] <- exp(S[i, crf$state.map[i,]]*alpha/2)
   }
   A.size = combined_net$sizeA
+  net.size = combined_net$size
   W1 <-  combined_net$matrixA
   W2 <- combined_net$matrixB
 
@@ -60,12 +73,24 @@ build_model <- function(combined_net,alpha,beta,delta.d)
     m1 <- 1:crf$n.states[n1]
     m2 <- 1:crf$n.states[n2]
     if(n1<=A.size && n2 <=A.size){
-    W <- as.matrix(W2[crf$state.map[n1, m1], crf$state.map[n2, m2]])
-    crf$edge.pot[[e]] <- exp(W*beta/2)
+      W <- matrix(0,nrow=length(m1),ncol = length(m2))
+      for(m11 in m1){
+        for(m22 in m2){
+            W[m11,m22] <- W2[crf$state.map[n1, m11]-A.size, crf$state.map[n2, m22]-A.size]
+        }
+      }
+      crf$edge.pot[[e]] <- exp(W*beta/2)
     }
     else if(n1 > A.size && n2 > A.size){
-    W <- as.matrix(W1[crf$state.map[n1, m1], crf$state.map[n2, m2]])
-    crf$edge.pot[[e]] <- exp(W*beta/2)
+      W <- matrix(0,nrow=length(m1),ncol = length(m2))
+      for(m11 in m1){
+        for(m22 in m2){
+          if(crf$state.map[n1, m11]<=A.size && crf$state.map[n2, m22] <=A.size){
+            W[m11,m22] <- W1[crf$state.map[n1, m11], crf$state.map[n2, m22]]
+          }
+        }
+      }
+      crf$edge.pot[[e]] <- exp(W*beta/2)
     }
     else{
       G <- matrix(0,nrow=length(m1),ncol = length(m2))
