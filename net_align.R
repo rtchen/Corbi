@@ -33,7 +33,7 @@ read_net <- function(netfileA,netfileB,simfile)
   net.matrixA <- sparseMatrix(node.id[net.edgeA[,1]], node.id[net.edgeA[,2]], x=T, dims=c(net.size+1, net.size+1))
   net.matrixB <- sparseMatrix(node.id[net.edgeB[,1]], node.id[net.edgeB[,2]], x=T, dims=c(net.size+1, net.size+1))
   sim.matrix <- sparseMatrix(node.id[sim.edge[,1]], node.id[sim.edge[,2]], x=as.numeric(sim.text[,3]), dims=c(net.size, net.size))
-  list(node_sim = sim.matrix,node.id = node.id,sizeA=net.sizeA,node=net.node, matrix=net.matrix,
+  list(node_sim = sim.matrix,sizeA=net.sizeA,node=net.node, matrix=net.matrix,
        matrixA = net.matrixA,matrixB = net.matrixB)
   
 }
