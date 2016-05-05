@@ -1,7 +1,7 @@
 net_align <- function(netfileA, netfileB,simfile, alpha=1,beta=2,delta.d=1e-10,output="result.txt")
 {
   combined_net <- read_net(netfileA,netfileB,simfile)
-  crf <-build_model(combined_net,node_sim,alpha,beta,delta.d)
+  crf <-build_model(combined_net,alpha,beta,delta.d)
   result <- decode.lbp(crf)
   result <- crf$state.map[cbind(1:crf$n.nodes, result)]
   write_result(combined_net, result, output)
@@ -38,7 +38,7 @@ read_net <- function(netfileA,netfileB,simfile)
   
 }
 
-build_model <- function(combined_net,node_sim,alpha,beta,delta.d)
+build_model <- function(combined_net,alpha,beta,delta.d)
 { 
   S <- cbind(combined_net$node_sim,delta.d)
   crf <- make.crf(combined_net$matrix, rowSums(S>0)) 
