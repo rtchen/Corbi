@@ -1,9 +1,15 @@
 net_align <- function(netfileA, netfileB,simfile, alpha=1,beta=2,delta.d=1e-10,output="result.txt")
-{
+{ a <- Sys.time()
   combined_net <- read_net(netfileA,netfileB,simfile)
+  b<- Sys.time()
   crf <-build_model(combined_net,alpha,beta,delta.d)
+  c <- Sys.time()
   result <- decode.lbp(crf)
+  d <- Sys.time()
   result <- crf$state.map[cbind(1:crf$n.nodes, result)]
+  print(b-a)
+  print(c-b)
+  print(d-c)
   write_result(combined_net, result, output)
 }
 
@@ -68,17 +74,23 @@ build_model <- function(combined_net,alpha,beta,delta.d)
     crf$edge.pot[[e]] <- exp(W*beta/2)
     }
     else{
-      G <- matrix(0,nrow=length(m1),ncol = length(m2))
+      G <- matrix(1,nrow=length(m1),ncol = length(m2))
       for(m11 in m1){
-        for(m22 in m2){
-          if(crf$state.map[n1,m11]==n2 && crf$state.map[n2,m22]==n1){
-            G[m11,m22]<-1
-          }
-          else if(crf$state.map[n1,m11]!=n2 && crf$state.map[n2,m22]!=n1){
-            G[m11,m22]<-1
-          }
-        }
+        if(crf$state.map[n1,m11]==n2)
+          break
       }
+      for(m in m2){
+        G[m11,m]<-0
+      }
+      for(m22 in m2){
+        if(crf$state.map[n2,m22]==n1)
+          break
+      }
+      for(m in m1){
+        G[m,m22]<-0
+      }
+      G[m11,m22] <-1
+      
       crf$edge.pot[[e]]<-G
     }
   }
