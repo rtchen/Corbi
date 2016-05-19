@@ -2,20 +2,20 @@ net_align <- function(netfileA, netfileB,simfile, alpha=1,beta=2,delta.d=1e-10,o
 { a <- Sys.time()
   combined_net <- read_net(netfileA,netfileB,simfile)
   b<- Sys.time()
+  print(b-a)
   crf <-build_model(combined_net,alpha,beta,delta.d)
   c <- Sys.time()
+  print(c-b)
   result <- decode.lbp(crf)
   d <- Sys.time()
   result <- crf$state.map[cbind(1:crf$n.nodes, result)]
-  print(b-a)
-  print(c-b)
   print(d-c)
   write_result(combined_net, result, output)
 }
 
 
 read_net <- function(netfileA,netfileB,simfile)
-{ 
+{
   net.textA <- as.matrix(read.table(netfileA, fill=T, as.is=T))
   net.textB <- as.matrix(read.table(netfileB, fill=T, as.is=T))
   sim.text <- as.matrix(read.table(simfile, fill=T, as.is=T))
@@ -25,9 +25,11 @@ read_net <- function(netfileA,netfileB,simfile)
   net.nodeB <- unique(as.character(net.textB))
   net.sizeB <- length(net.nodeB)
   net.nodeB <- net.nodeB[net.nodeB != ""]
-  sim.node <- unique(as.character(sim.text))
-  net.node <- unique(c(net.nodeA,net.nodeB,sim.text))
+  sim.node <- unique(c(as.character(sim.text[,1]),as.character(sim.text[,2])))
+  sim.node <- sim.node[sim.node !=""]
+  net.node <- unique(c(net.nodeA,net.nodeB,sim.node))
   net.size = length(net.node)
+  print(net.size)
   net.edgeA <- cbind(as.character(net.textA[,1]), as.character(net.textA[,2]))
   net.edgeB <- cbind(as.character(net.textB[,1]), as.character(net.textB[,2]))
   net.edgeA <- net.edgeA[net.edgeA[,2] != "", ]
@@ -46,22 +48,22 @@ read_net <- function(netfileA,netfileB,simfile)
 }
 
 build_model <- function(combined_net,alpha,beta,delta.d)
-{ 
+{
   S <- cbind(combined_net$node_sim,delta.d)
   crf <- make.crf(combined_net$matrix, rowSums(S>0)) 
   crf$state.map <- matrix(0, nrow=crf$n.nodes, ncol=crf$max.state)
+  print("here1")
   for (i in 1:crf$n.nodes)
-  { 
+  { print(i)
     crf$state.map[i, 1:crf$n.states[i]] <- which(S[i,] > 0)
     crf$node.pot[i, 1:crf$n.states[i]] <- exp(S[i, crf$state.map[i,]]*alpha/2)
   }
   A.size = combined_net$sizeA
   W1 <-  combined_net$matrixA
   W2 <- combined_net$matrixB
-
-  
+  print("here2")
   for (e in 1:crf$n.edges)
-  {
+  { a<-Sys.time()
     n1 <- crf$edges[e, 1]
     n2 <- crf$edges[e, 2]
     m1 <- 1:crf$n.states[n1]
